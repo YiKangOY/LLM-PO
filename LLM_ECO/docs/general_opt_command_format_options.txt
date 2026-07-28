@@ -1,0 +1,29 @@
+# Timing Fixing Guidelines
+**COMMAND FORMAT AND OPTIONS:**
+Command format: opt_timing -type [setup|hold] -cell_class [cell_class] -actions [method] -site_mode [mode] (-area_cap [x]) (-slack_above [slack_limit]) (-slack_below [slack_limit])
+Available type: setup or hold, you can only choose one of them.
+Available actions for setup: gate_sizing, gate_sizing_side_load, buffer_insertion, you can select one method each time. The most common choice is gate_sizing, then buffer_insertion, then gate_sizing_side_load.
+Available actions for hold: gate_sizing, buffer_insertion, you can select one method each time. The most common choice is gate_sizing, then buffer_insertion.
+Available cell types: combinational, sequential, clock_tree, you can only choose one of them. If you do not choose combinational, then you can only use gate_sizing method. The most common cell type is combinational, then sequential, use clock_tree only if you find related unfixable reasons.
+Available physical modes: open_slot, occupied_slot. The common selection is open_slot, you can explore occupied_slot if you find the timing optimization result is not promising.
+Optional -area_cap: Specify area increment limit for gate_sizing, only use it when gate_sizing option selected, default value is 2, available values are [4|8|10|12|16|20]. In exploration stage, use the default value, if you find related unfixable reasons, increase these value.
+Optional -slack_above slack_limit: By setting the slack limit to a positive value, the command will try to improve the timing of paths with slacks less than the slack_limit (means no timing violation). This may increase area and power but can further improve timing. Only use it in exploitation stage when you see WNS can not be optimized futher but there is still TNS violation. Also do not use it when the iteration budget is nearly exhausted to ensure there is time to make power/area recovery.
+Optional: -slack_below slack_limit: By setting the slack limit to a negative value, the command will NOT try to improve the timing of paths with slacks larger than the slack_limit (more negative). This may limit the timing optimization but lead to reduced power and area incresing. Do not use it when you need high-effort timing optimization.
+---
+# Power Fixing Guidelines
+**COMMAND FORMAT AND OPTIONS:**
+Command format: opt_power -actions [method] -cell_class [cell_class] -power_scope [mode] (-setup_guard [setup_guard])
+Available actions: gate_sizing, buffer_removal
+Available power_scope: total | dynamic | leakage. Total power optimization is more suitable at earlier stage or exploration to directly optimize power. dynamic and leakage can work on later exploitation stage when you find corresponding power component is not optimized much or  re-rised after timing optimization.
+Available cell types: [combinational, sequential] you can choose any one from them. You can also choose this to target power optimization on combinational or sequential cells. Usually, at earlier stage, can start with combinational.
+Note: buffer_removal cannot be used with other options like -cell_class.
+Optional: -setup_guard setup_guard: Specify the setup timing margin to ensure that the power optimization does not degrade setup beyond this margin. Default is 0. Set it as a negative value to allow setup degradation when you optimize power with high efforts.
+
+---
+# Area Fixing Guidelines
+**COMMAND FORMAT AND OPTIONS:**
+Command format: opt_area -actions [method] -cell_class [cell_class] (-setup_guard [setup_guard])
+Available actions: gate_sizing, buffer_removal
+Available cell types: [combinational, sequential, clock_tree] you can choose any one from them. You can also choose this to target area optimization on combinational or sequential cells. Usually, at earlier stage, can start with combinational.
+Note: buffer_removal cannot be used with any other options, including -cell_class.
+Optional: -setup_guard setup_guard: Specify the setup timing margin to ensure that the area optimization does not degrade setup beyond this margin. Default is 0. Set it as a negative value to allow setup degradation when you optimize area with high efforts.

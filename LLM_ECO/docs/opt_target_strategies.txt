@@ -1,0 +1,120 @@
+# Description of Strategy: Timing → Power Recovery → Area Trim → Final Timing Touch-up
+1. **Inside one round (target order + effort):**
+   * **Timing closure (high effort; allow power/area regress):** use various actions to improve **WNS/TNS**; composite fixes are often required in practice.
+   * **Power recovery (medium effort; preserve timing):** recover **dynamic + total power** when there is positive slack; doing power recovery too early can consume slack and make later timing closure harder.
+   * **Area trim (low/medium effort; strict timing guardband):** reduce area where it does not create timing violations (treat “effort” as how much slack you are allowed to spend).
+   * **Final timing touch-up (low effort; “incremental”):** run an incremental timing optimizer aimed at removing remaining small violations **with minimized increasing area/power**.
+2. **Between rounds (evaluation + searching):**
+   * Keep a running **frontier set** of round results (WNS/TNS, total/dynamic/leakage power, area). Keep only solutions that are not strictly worse than another across all metrics (“no-regret keepers”).
+   * Generate the next round’s sequence by **small edits** to sequences that sit on the current frontier (swap two phases, change one phase’s effort, change “switch criteria” from timing→power, etc.), while enforcing diversity so you don’t explore near-duplicates.
+---
+
+# Description of Strategy: Setup Timing → Hold Timing → Power Recovery → Setup Re-check
+1. **Inside one round (target order + effort):**
+   * **Setup repair (high effort):** prioritize WNS/TNS improvements.
+   * **Hold repair (medium/high effort):** on hold-critical paths (but keep a setup guardband to limit “setup harm”).
+   * **Power recovery (medium effort):** after both setup+hold are acceptable, recover dynamic/total power using available slack.
+   * **Setup re-check (low effort incremental):** a final incremental timing pass to clean any setup regressions introduced by hold/power changes.
+2. **Between rounds (evaluation + searching):**
+   * Score each round with a **constraint-first filter** (e.g., discard sequences that leave violations above thresholds), then rank survivors by how much they improve the current frontier.
+   * Allocate more trials to sequences that repeatedly produce frontier improvements under multiple corners/scenarios (stability-weighted selection).
+---
+
+# Description of Strategy: Timing (Aggressive) → Timing (Incremental) → Power → Timing (Incremental)
+1. **Inside one round (target order + effort):**
+   * **Aggressive timing push:** allow area/power sacrifice to quickly reduce TNS/WNS.
+   * **Incremental timing stabilization:** explicitly switch to an incremental method intended not to increase area/power, to “lock in” timing improvements before doing recovery.
+   * **Power recovery:** recover dynamic/total power using slack-aware optimization.
+   * **Incremental timing cleanup:** remove small regressions at minimal collateral cost.
+2. **Between rounds (evaluation + searching):**
+   * Use a **two-tier evaluation**: many low-effort rounds to map the frontier quickly, then re-run only the best frontier candidates with high-effort settings for confirmation (“screen then intensify”).
+---
+
+# Description of Strategy: Power-first Under Hard Timing Floors → Timing → Power
+1. **Inside one round (target order + effort):**
+   * **Constrained power reduction (low effort; hard timing floors):** only accept power reductions that keep WNS/TNS above a strict floor, since early downsizing can consume slack and make later timing fixes difficult.
+   * **Timing closure (high effort):** repair remaining violations.
+   * **Power recovery (medium effort):** once timing is closed, do broader power recovery.
+2. **Between rounds (evaluation + searching):**
+   * Only consider this family when the design has **known slack headroom**; otherwise deprioritize it based on early-round evidence (adaptive portfolio selection).
+---
+
+# Description of Strategy: Leakage-focused Recovery Passes Interleaved with Timing Guardbands
+1. **Inside one round (target order + effort):**
+   * **Timing closure (high effort).
+   * **Leakage recovery (medium effort; strict timing constraints):** optimize with timing margin; leakage recovery flows are often implemented as specialized post-timing steps.
+   * **Dynamic/total power recovery (medium effort):** after leakage steps, recover switching power using slack-aware optimization.
+   * **Final incremental timing (low effort):** ensure no setup/hold violation remain.
+2. **Between rounds (evaluation + searching):**
+   * Track **which power component** (dynamic vs leakage) improved per sequence and bias future sequences toward the component that is currently “cheapest” in timing/area terms (learned transition preferences).
+---
+
+# Description of Strategy: Area Trim with Timing “Backstops” → Power → Timing
+1. **Inside one round (target order + effort):**
+   * **Area trim (medium effort; timing backstop):** reduce area where timing slack is abundant; treat “effort” as the minimum slack you must preserve.
+   * **Power recovery (medium effort):** reduce total/dynamic with the remaining slack.
+   * **Timing closure (medium/high effort):** repair any timing violations with focused optimization on paths that have violations.
+2. **Between rounds (evaluation + searching):**
+   * Use a **risk-aware selector**: only keep sequences whose worst-case WNS/TNS regressions are bounded while they deliver consistent area gains (stability over peak gains).
+---
+
+# Description of Strategy: Slack-Distribution Driven Power Recovery (Timing kept stable while “spending slack”)
+1. **Inside one round (target order + effort):**
+   * **Timing closure (high effort).**
+   * **Power recovery using slack distribution management:** explicitly manage slack allocation to maximize total/leakage reduction under performance constraints (reduces the chance you “overspend” slack in the wrong region).
+   * **Area cleanup (low effort):** reduce area introduced during timing fixes when it is safe.
+2. **Between rounds (evaluation + searching):**
+   * Search over **where** to spend slack  and how aggressive to be, and keep variants that shift the frontier outward (more power reduction at the same timing, or better timing at the same power).
+---
+
+# Description of Strategy: Hold-first Stabilization → Setup Timing → Power → Hold Re-check
+1. **Inside one round (target order + effort):**
+   * **Hold stabilization (medium effort):** fix hold first to reduce later “hold churn”.
+   * **Setup closure (high effort):** optimize for WNS/TNS.
+   * **Power recovery (medium effort):** use slack-aware optimizetions.
+   * **Hold re-check (low effort):** final pass to clean any hold regressions after power changes.
+2. **Between rounds (evaluation + searching):**
+   * Keep separate “best-known” order for **setup-heavy** vs **hold-heavy** designs, chosen by early-round diagnostics (e.g., fraction of violations that are hold vs setup). Then cross-test the best few sequences from each family.
+---
+
+# Description of Strategy: Multi-Candidate Round (branch within a round, then converge)
+1. **Inside one round (target order + effort):**
+   * Run **two or three short branches** starting from the same snapshot, e.g.:
+     * Branch A: Timing(high) → Power(med)
+     * Branch B: Timing(high) → Area(med)
+     * Branch C: Timing(high) → Leakage(med)
+   * Pick the branch that is best on the **current frontier direction**, then finish with incremental timing stabilization.
+2. **Between rounds (evaluation + searching):**
+   * Treat each branch pattern as a “template”; keep templates that reliably produce frontier moves, and reduce sampling of templates that rarely survive the frontier filter.
+---
+
+# Description of Strategy: Population-of-Sequences Search (keep many diverse sequences; breed new ones from the best frontier movers)
+1. **Inside one round (target order + effort):**
+   * Any fixed candidate sequence (e.g., Timing→Power→Area→Timing) is allowed; the key is that each round corresponds to one candidate “recipe”.
+2. **Between rounds (evaluation + searching):**
+   * Maintain a **pool** of candidate recipes and their results; after each batch:
+     * Keep recipes that are on (or near) the current frontier and are **spread out** (avoid keeping nearly-identical recipes).
+     * Create new recipes by **mixing** parts of two good recipes (prefix from one + suffix from another) and by **small random edits** (swap two phases, tweak one effort, insert a final incremental timing step).
+   * This style of dominance-based + diversity-aware selection is widely used in multi-objective optimization work.
+---
+
+# Description of Strategy: Model-Guided Sequence Proposal (learn from prior rounds to pick the next sequence)
+1. **Inside one round (target order + effort):**
+   * Use any target order; log per-iteration deltas: ΔWNS, ΔTNS, Δtotal/dynamic/leakage power, Δarea.
+2. **Between rounds (evaluation + searching):**
+   * Fit a lightweight predictive model from **sequence features** (order, effort levels, switch thresholds, last-round metrics) to expected QoR deltas, and propose the next sequences by:
+     * choosing candidates predicted to improve the frontier, and
+     * occasionally choosing candidates where the model is uncertain (to learn faster).
+   * Surrogate-guided multi-objective exploration is a standard way to reduce the number of expensive evaluations in PPA tradeoff searches.
+---
+
+# Description of Strategy: “Satisficing” Constraints Then Tradeoff Refinement (tighten goals gradually)
+1. **Inside one round (target order + effort):**
+   * Start with **timing-first** to reach a “good-enough” WNS/TNS band, then do power/area recovery steps; do not try to optimize all objectives aggressively from the beginning.
+2. **Between rounds (evaluation + searching):**
+   * Run stages across rounds:
+     * Stage 1: accept only sequences that meet timing bands;
+     * Stage 2: within those, push power down;
+     * Stage 3: within those, trim area;
+     * Stage 4: final rebalancing to densify the frontier.
+   * “Good-enough then refine tradeoffs” is a known approach in multi-objective circuit optimization (as an alternative to one-shot weighted sums).

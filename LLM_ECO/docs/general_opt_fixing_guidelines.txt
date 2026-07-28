@@ -1,0 +1,31 @@
+# Optimization Target Selection Strategy:
+1. When iteration budget is sufficient, explore timing, power, area targets.
+2. For target that are less optimized before, try with different optimization options to explore the potential of optimizing these targets and reveal unfixable reasons.
+3. For well-explored and exploited targets, if there is no progress, turn to other targets.
+4. Leave enough iterations to make targeted optimization options based on unfixable reasons.
+5. Leave enough iterations for area and power optimization after exploiting timing optimization, since optimizing timing increase area and power.
+
+---
+# Optimization Option Selection Strategy (Explore or Exploit):
+1. When iteration budget is sufficient, explore different optimization options to quickly fix easily-fixed problems and reveal unfixable reasons.
+2. Reserve iterations to exploit targeted optimization options runs based on unfixable reasons.
+3. When there is limited iteration budget, can either explore previously un-tried options or exploit still unfixed problems.
+
+---
+# Timing Fixing Guidelines
+1. When strategy is Exploration, broadly explore different command options combinations to cover more possibilities and reveal unfixable reasons for future optimization iterations.
+2. When strategy is Exploitation, understand the optimization history and unfixable reasons and their definitions to target the potential fixing options. Also avoid repeating the previous optimization attempts that has no effect. For example, if many unfixable reason says the violation is in the clock network, then choose cell_class as clock_tree.
+3. You should treat fixing setup and hold violations seperately, with seperate exploration and exploitation progress control.
+4. If the unfixable reasons are non fixable, ignore them since you cannot fix them.
+
+---
+# Power Fixing Guidelines
+1. When strategy is Exploration, broadly explore different command options combinations to cover more possibilities and reveal unfixable reasons for future optimization iterations.
+2. When strategy is Exploitation, understand the optimization history and unfixable reasons and their definitions to target the potential fixing options. Also avoid repeating the previous optimization attempts that has no effect.
+3. When timing optimization causes power consumption increases, you can re perform power optimization based on the incresed power component, or directly the total power.
+
+---
+# Area Fixing Guidelines
+1. When strategy is Exploration, broadly explore different command options combinations to cover more possibilities and reveal unfixable reasons for future optimization iterations.
+2. When strategy is Exploitation, understand the optimization history and unfixable reasons and their definitions to target the potential fixing options. Also avoid repeating the previous optimization attempts that has no effect.
+3. When timing optimization causes area  increases, you can re perform area optimization again.

@@ -1,0 +1,7 @@
+Summary of A3C/PPO rewrite (SB3 removed)
+-----------------------------------------
+- Removed Stable-Baselines3 pipeline (rl_eco_agent.py, train_rl_agent.py, early_stopping_callback.py, SB3 tests) to mirror the reference A3C framework.
+- Added discrete ECO action enumeration (eco_action_space.py) and A3C-friendly env wrapper (eco_env.py) on top of existing ECOEnvironment.
+- Introduced ECO-specific actor-critic network, agent, and training loop (eco_agent.py, eco_a3c.py) following the reference dse A3C/ PPO patterns; added default config helper (eco_a3c_config.py) and CLI entry (train_eco_a3c.py).
+- Updated README to describe the new architecture and usage; updated __init__.py exports accordingly.
+- Migrated RL environments and dependencies to Gymnasium (drop-in replacement for Gym); added helper to derive dimensions from gymnasium spaces.

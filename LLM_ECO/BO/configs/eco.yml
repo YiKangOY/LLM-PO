@@ -1,0 +1,83 @@
+# Author: baichen318@gmail.com
+# Standalone config for running BO with a custom ECO environment (BO-style)
+
+# working mode: online/offline
+mode: online
+
+
+# BO-style ECO settings
+rl-bo:
+  # length_of_one_episode from ECO env (aligned with ECO default)
+  episode-length: 15
+  # number of random action sequences to seed the BO candidate pool
+  candidate-pool: 64
+  # initial samples evaluated before BO loop starts
+  initial-samples: 0
+  # parallel environments for sampling/evaluation (use 1 for real flow)
+  num-envs: 1
+  # set False to call your custom ECO environment instead of the simulator
+  use-simulation: False
+  # plug in your BO ECO adapter (path.to.module:ClassName)
+  env-entrypoint: bo_env_adapter:BOECOEnvAdapter
+  # keyword arguments forwarded to the custom ECO environment class
+  env-kwargs:
+    bo_root: ../RL
+    design_name: ECO_Vex
+    # required for real flow; leave empty for simulation
+    reports_loader_entrypoint: bo_report_loader:load_reports_for_iteration
+  # reference point for hypervolume (timing reward, power+area reward)
+  ref-point:
+    - -5.0
+    - -5.0
+  # optional overrides applied to the ECO config (same structure as ECO env)
+  bo-config-overrides:
+    rl:
+      max_iterations_per_episode: 15
+      action_space:
+        # flattened ECO action dimension
+        dimension: 24
+        low: 0.0
+        high: 1.0
+    action_spaces:
+      timing:
+        area_cap:
+          low: 0.0
+          high: 20.0
+        slack_above:
+          low: 0.01
+          high: 0.20
+        slack_below:
+          low: -0.20
+          high: -0.01
+      power:
+        setup_guard:
+          low: -0.10
+          high: 0.0
+      area:
+        setup_guard:
+          low: -0.10
+          high: 0.0
+    reward_weights:
+      setup_tns: 10.0
+      hold_tns: 1.0
+      power: 3.0
+      area: 3.0
+
+
+# bayesian optimization settings
+bo:
+  # the maximal optimization steps
+  max-bo-steps: 30
+
+
+# DKL-GP settings
+dkl-gp:
+  # the MLP output dimension specification
+  mlp-output-dim: 6
+  # the learning rate for DKL-GP
+  learning-rate: 0.001
+  # the maximal training epochs
+  max-traininig-epoch: 1000
+
+report:
+  path: rpts/eco

@@ -1,0 +1,8 @@
+
+**COMMAND FORMAT AND OPTIONS:**
+Command format: opt_power -actions [action] -cell_class [cell_class] -power_scope [scope] (-setup_guard [setup_guard])
+Available actions: gate_sizing, buffer_removal
+Available power_scope: total | dynamic | leakage. Total power optimization is more suitable at earlier stage or exploration to directly optimize power. dynamic and leakage can work on later exploitation stage when you find corresponding power component is not optimized much or  re-rised after timing optimization.
+Available cell classes: [combinational, sequential] you can choose any one from them. You can also choose this to target power optimization on combinational or sequential cells. Usually, at earlier stage, can start with combinational.
+Note: buffer_removal cannot be used with other options like -cell_class.
+Optional: -setup_guard setup_guard: Specify the setup timing guard to ensure that the power optimization does not degrade setup WNS beyond this guard. Default is 0. Set it as a negative value to allow setup WNS degradation when you optimize power with high efforts. Give pure number, no units.

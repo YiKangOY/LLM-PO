@@ -1,0 +1,130 @@
+# Description of Strategy: Aggressive timing fix with controlled “debt,” then systematic recovery (power → area → incremental timing)
+1. **Inside one round (stage techniques + option combinations):**
+   * **Timing stage (very high effort):** start with **setup** on **combinational** cells using **cell sizing first**, then **buffer insertion**; reserve “expand target set” behavior (e.g., include near-critical paths via *slack-limited targeting*) only at the beginning so you can recover later.
+   * **UNFIX-driven branching (timing):**
+     * **A (cells exist outside area limit):** raise the **area increment cap** gradually (small→larger) only for the sizing method; keep buffering unchanged.
+     * **I (buffer insertion can’t fix):** pivot toward **sizing** (and optionally the side-load-aware sizing variant) before adding more buffers.
+     * **S (sizing can’t fix):** pivot toward **buffer insertion** (or switch cell_class if the issue is not in combinational).
+     * **O (no open free site):** switch physical placement mode from **open-site only** to allow **occupied-site** insertion, but only for the smallest subset of worst paths to avoid widespread disturbance.
+     * **C (clock network):** switch cell_class to **clock_tree** and constrain to sizing-only.
+   * **Power recovery stage (medium effort, strict timing backstop):** do **total power** first for broad recovery, then refine by **dynamic vs leakage** based on which component regressed after timing. Practical ECO guidance often emphasizes that what you can recover post-timing depends on how much was already optimized earlier.
+   * **Area recovery stage (low/medium effort):** prefer **downsizing** (gate_sizing) where slack is abundant; use **buffer removal** when timing-stage buffering dominates area.
+   * **Final incremental timing stage (low effort):** run a narrow timing pass that you don’t recreate recovery debt.
+2. **Between rounds (explore/exploit):**
+   * Explore by varying only **one “debt knob” per round**: (i) max area increment escalation, (ii) whether occupied-site insertion is allowed, (iii) how far beyond violations you target (slack threshold).
+   * Exploit by re-running only traces that land on the current **non-worse set** (Pareto set).
+---
+
+# Description of Strategy: Alternating micro-iterations to prevent overshoot (setup timing ↔ power ↔ hold timing ↔ area)
+1. **Inside one round:**
+   * Use **short alternating passes** instead of long single-objective pushes:
+     * setup timing micro-pass (sizing-first, buffer-second)
+     * power micro-pass (total-first, then dynamic/leakage if needed)
+     * hold timing micro-pass (sizing-first, then buffer insertion)
+     * optional area micro-pass (downsizing)
+   * **Exploration inside round:** rotate method priority when improvements stall (e.g., sizing → buffering → side-load sizing for setup). Simultaneous sizing+buffering is a well-studied pairing for timing improvement.
+   * **Exploitation inside round:** once a combination produces consistent ΔWNS/ΔTNS without big power/area regressions, keep it and tighten targeting to only the worst violating groups (avoid improving already-safe paths).
+   * **UNFIX handling:** treat **B/T**-style “benefit too small / margin too tight” as a trigger to *switch method* rather than increasing aggressiveness.
+2. **Between rounds:**
+   * Run **batches** of different alternation schedules (how many stages, and in what order), then keep a **diverse subset** of the best non-worse outcomes (avoid keeping near-duplicates). Diverse Pareto-front discovery in batch settings is a common objective in multi-objective search.
+---
+
+# Description of Strategy: Setup-first stabilization, then hold “containment,” then recovery (minimize setup/hold ping-pong)
+1. **Inside one round:**
+   * **Setup timing stage (high effort):** focus on combinational first; only touch sequential if evidence suggests sequential dominates worst paths. Use sizing before buffering to avoid excessive area/power bloat early.
+   * **Hold timing stage (medium effort):** prefer the least-invasive fix first; when holds are large, buffering/delay insertion is typical (conceptually aligned with your buffer-insert method).
+   * **Power stage (medium effort):** broad total-power recovery; if hold fixes inflated dynamic power, explicitly bias toward dynamic cleanup; if setup closure inflated leakage, bias toward leakage cleanup.
+   * **Area stage (low effort):** only after timing is stable; remove buffers only if they are clearly redundant (otherwise prefer gentle downsizing).
+   * **Incremental setup re-check:** low effort, narrow targeting.
+2. **Between rounds:**
+   * Exploration: vary the “hold containment” intensity (single pass vs two passes; sizing-only vs allowing buffer insertion).
+   * Exploitation: select the most stable traces (small variance across corners) and tune only recovery ordering (dynamic vs leakage first).
+---
+
+# Description of Strategy: Congestion-aware timing (avoid placement churn) with “occupied-site as last resort”
+1. **Inside one round:**
+   * **Timing stage (medium/high effort):** start with **open-site only** physical mode; use **buffer insertion** until you know congestion isn’t the limiter. Physical-aware ECO flows emphasize accuracy and predictability when you’re close to signoff.
+   * **UNFIX handling:**
+     * **O (no open sites):** enable occupied-site **only for buffering**, and only for the smallest subset (worst-N paths).
+     * **D/L/R (density/physical/parasitic placement failures):** treat as a signal to **switch method mix** (favor sizing/side-load sizing) rather than escalating insertion.
+   * **Recovery stages:** prioritize **buffer removal** (power/area) if buffering was the main timing lever used; then do selective downsizing.
+2. **Between rounds:**
+   * Explore two families: “open-site only” vs “occupied-site allowed on O.”
+   * Exploit the family that yields more consistent Pareto improvements (fewer run-to-run surprises) and allocate fewer trials to the riskier family.
+---
+
+# Description of Strategy: Clock-network exception handling (only when the tool reports clock-related violations)
+1. **Inside one round:**
+   * **Default path:** treat almost everything as combinational timing optimization.
+   * **When UNFIX=C (clock network):** switch to clock-network cell_class and constrain to **sizing-only** (per your rules), because clock issues often require specialized handling and shouldn’t trigger broad data-path buffering.
+   * **Recovery:** after clock-network adjustments, re-run a minimal setup/hold check on combinational to ensure no collateral impact; then proceed to power/area recovery.
+2. **Between rounds:**
+   * Keep clock-network-handling traces separate from “normal” traces so they don’t pollute learning about what works on standard data-path violations.
+---
+
+# Description of Strategy: Power-first with controlled timing sacrifice (only when timing has headroom)
+1. **Inside one round:**
+   * **Power stage (high effort):** allow limited timing degradation via a **negative setup margin** when you need big power drops and timing headroom exists; start with total, then specialize to dynamic/leakage.
+   * **UNFIX handling (power):**
+     * **T/W (timing/DRC risk):** reduce aggressiveness (tighten setup margin back toward 0) or switch from sizing to buffer removal (if allowed and relevant).
+     * **S/Z (no better-power alternative / already sized):** switch target from combinational to sequential (or vice versa), or switch power_scope (total ↔ component modes).
+   * **Timing stage (medium/high effort):** after power-first, repair any induced setup/hold issues using sizing-first, buffer-second.
+   * **Area stage (low/medium):** only if area regressed; prefer gentle downsizing with strict timing backstop.
+2. **Between rounds:**
+   * Exploration: try this only on designs where early rounds show persistent slack headroom.
+   * Exploitation: once it works, tune only how much timing sacrifice you permit (setup margin magnitude).
+---
+
+# Description of Strategy: Downsizing-first power recovery, then leakage recovery (slack budgeting to avoid self-cannibalization)
+1. **Inside one round:**
+   * **Timing stage:** close timing first (standard).
+   * **Power recovery ordering:** apply **downsizing-driven reductions first**, then **leakage-focused actions**, because leakage-focused swaps can consume slack and limit later downsizing opportunity.
+   * **Exploration:** test (total → leakage) vs (total → dynamic → leakage) to see which yields a better Pareto move given your design’s power breakdown.
+   * **Exploitation:** once best ordering is known, keep ordering fixed and only tune allowed timing sacrifice (setup margin).
+2. **Between rounds:**
+   * Maintain per-round attribution: how much each power stage changed total/dynamic/leakage and how much timing worsened; prioritize traces with the best “power drop per timing hit.”
+---
+
+# Description of Strategy: Area-first trimming with strict timing backstop, then localized timing repair (when area is the primary pain)
+1. **Inside one round:**
+   * **Area stage (medium/high effort):** allow timing sacrifice via a modest negative setup margin only if necessary; prefer downsizing targeted to the least timing-sensitive groups.
+   * **UNFIX handling (area):**
+     * **B/L/S/Z:** switch cell_class focus (combinational ↔ sequential) or switch from sizing to buffer removal if sizing is saturated/blocked.
+     * **T/W:** tighten setup margin back toward 0 and reduce aggressiveness.
+   * **Timing stage (high effort but narrow):** repair only newly-broken worst paths; avoid broad “improve near-critical” expansions.
+   * **Power stage:** only after timing is stable; component-focused cleanup if a specific component spiked.
+2. **Between rounds:**
+   * Explore multiple “area-first intensities” (strict margin vs permissive margin).
+   * Exploit the smallest intensity that still yields consistent area reduction without collapsing timing.
+---
+
+# Description of Strategy: Sequential-focused passes to reduce collateral changes, then combinational heavy lifting
+1. **Inside one round:**
+   * **Timing stage part 1 (medium effort, sequential):** since sequential targeting constrains method choices (sizing-only), use it as a low-branching, low-surprise pass to capture easy wins with limited footprint.
+   * **Timing stage part 2 (high effort, combinational):** full method palette (sizing → buffering → side-load sizing).
+   * **Recovery:** power then area, with strict backstops; finish with incremental timing.
+   * Rationale: sizing decisions influence PPA tradeoffs strongly; controlling where you apply them helps manage area/power side effects.
+2. **Between rounds:**
+   * Explore how early sequential passes affect final Pareto position (some designs benefit, others waste iterations).
+   * Exploit by enabling sequential-first only when prior rounds show repeated regressions localized around sequential endpoints.
+---
+
+# Description of Strategy: “Branch-and-pick” within a round (same timing checkpoint, multiple recovery variants)
+1. **Inside one round:**
+   * **Checkpoint after timing stage:** stop when ΔWNS/ΔTNS improvement rate flattens.
+   * **Intra-round exploration branches:** run 2–4 short recovery variants:
+     * power: total-first vs dynamic-first vs leakage-first
+     * area: downsizing-first vs buffer-removal-first
+   * **Intra-round exploitation:** pick the branch that produces the best Pareto move (e.g., same WNS/TNS with lower total/leakage and not worse area), then do a final incremental timing pass.
+2. **Between rounds:**
+   * Treat each branch set as a trace family.” Keep families that frequently yield non-worse results and keep **diversity** across the objective space so search doesn’t collapse to a narrow region.
+---
+
+# Description of Strategy: Pool-of-recipes across rounds (retain diverse non-worse solutions; generate new ones by recombining option patterns)
+1. **Inside one round:**
+   * A recipe specifies: (timing order setup/hold, method priority, cell_class focus, physical-mode policy, area-limit escalation policy, slack targeting policy) + (power_scope schedule, setup-margin policy, optional buffer removal) + (area policy).
+   * Execute one recipe; apply UNFIX rules as deterministic switches.
+2. **Between rounds:**
+   * **Evaluation:** keep only results that are not worse in all metrics (WNS/TNS, total/dynamic/leakage, area). Also keep “near-frontier” points that improve diversity (spread) to avoid missing new tradeoff directions.
+   * **Exploration:** create new recipes by (i) swapping stage order, (ii) swapping method priority (sizing-first vs buffering-first), (iii) changing escalation triggers (e.g., raise area cap only on A; allow occupied-site only on O), (iv) changing recovery order (downsizing before leakage).
+   * **Exploitation:** intensify only a small subset—re-run them with slightly higher effort (one knob at a time) and require that improvements persist across multiple corners/modes (signoff-driven multicorner emphasis).

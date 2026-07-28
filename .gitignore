@@ -1,0 +1,93 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Jupyter / IPython
+.ipynb_checkpoints/
+.ipython/
+
+# Testing / coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Logs
+*.log
+logs/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+.codex/
+AGENTS.md
+core
+core.*
+
+# Data / outputs (common ML)
+*.h5
+*.hdf5
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.tflite
+*.pb
+*.npz
+*.npy
+
+# ML frameworks
+# TensorFlow
+checkpoint
+*.tfevents.*
+
+# PyTorch Lightning
+lightning_logs/
+
+# TensorBoard
+runs/
+
+# Weights & Biases / MLflow
+wandb/
+mlruns/
+
+# Hugging Face
+.cache/
+.hf_cache/
+
+# LangChain / vector stores
+.langchain/
+langchain.db
+chroma/
+chromadb/
+
+# Local secrets
+.env
+.env.*
+
+# Model artifacts / datasets (project specific)
+models/
+outputs/
+artifacts/
+/data/
+/data.tar.gz

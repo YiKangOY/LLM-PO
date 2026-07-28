@@ -1,0 +1,221 @@
+# Timing → Power Recovery → Area Trim → Final Timing Touch-up 
+
+**Design Summary:** The design is timing-limited with little slack; an initial timing push is expected to expose power/area inflation, so the flow assumes power and area are elevated afterward and finishes with a timing cleanup.
+**Target selection:** Start with timing to create slack, then recover power, then trim area, then re-check timing at the end. If timing progress stalls, shift effort to power/area and come back for a final timing pass.
+**Option selection:** Early **explore** diverse tool option combinations for timing to quickly fix easy issues and surface “unfixable reasons.” Then **exploit** targeted options aligned to those reasons; avoid repeating options that previously had no effect.
+**Guidelines (timing/power/area):** Treat **setup vs hold** as separate timing sub-problems with independent explore/exploit control. Ignore truly non-fixable violations. After timing improvements (which may raise power/area), run power recovery focusing on the increased power component (or total power), then area recovery; only spend slack where safe. After power/area steps, do an incremental timing touch-up to repair any regressions.
+
+---
+
+# Setup Timing → Hold Timing → Power Recovery → Setup Re-check 
+
+**Design Summary:** The design is dominated by setup violations with secondary hold issues; after closing both, power is likely worse, so a power pass is needed before re-checking setup for regressions.
+**Target selection:** Prioritize **setup** closure first, then **hold**, then power; finish with a setup re-check to ensure hold/power didn’t reintroduce setup issues. If a stage stops improving, move on and preserve iterations for later re-checks.
+**Option selection:** For each stage, begin with **exploration** across option combinations to reveal fixability and unfixable reasons; then **exploit** options matched to the dominant reasons and prior history, avoiding repeats with no benefit. With limited budget, either try one untried option (explore) or double down on the best-known fix (exploit).
+**Guidelines:** Keep setup/hold handling distinct. Ignore non-fixable issues. Perform power optimization only after timing slack exists; if power optimization worsens timing, rely on the final setup re-check to restore timing. Track area side-effects; if timing fixes inflate area heavily, schedule a later area-focused pass (even if not in this sequence).
+
+---
+
+# Timing (Aggressive) → Timing (Incremental) → Power → Timing (Incremental) 
+
+**Design Summary:** The design has severe timing violations; an aggressive pass removes the worst offenders but leaves residuals, incremental cleanup stabilizes timing, then power recovery is needed before a final timing polish.
+**Target selection:** Use an aggressive timing pass to gain slack fast, then an incremental timing pass to stabilize, then optimize power, and end with incremental timing cleanup. Switch away from timing if it becomes well-exploited with no gains.
+**Option selection:** Aggressive timing is **exploration-heavy** (broad option coverage) to expose limits/unfixables. Incremental timing is **exploitation-heavy**, using only options shown to help and avoiding prior no-effect attempts. Power stage starts with exploration to find which power components can be reduced safely, then exploits the best component-focused options.
+**Guidelines:** Treat setup/hold separately when needed; don’t chase truly non-fixable reasons. If aggressive timing increases power/area, explicitly recover power afterward (and note whether area needs a later pass). After power changes, always run a timing cleanup to repair any regressions while minimizing new side-effects.
+
+---
+
+# Power-first Under Hard Timing Floors → Timing → Power 
+
+**Design Summary:** The design already has healthy slack but excessive power; constrained power cuts must respect timing floors, then timing is tightened, followed by another power pass to recover timing-induced regressions.
+**Target selection:** Use only when initial slack is healthy: do constrained power reduction first (with strict timing floors), then full timing closure, then power recovery again to fix power regressions caused by timing.
+**Option selection:** First power step is conservative exploration across power-focused option combinations **that must respect timing floors**; then exploit only safe, effective options. Timing step explores then exploits based on reported unfixable reasons and history. Final power step repeats explore→exploit to target remaining power opportunities without breaking closed timing.
+**Guidelines:** Ignore any power actions that violate timing floors (effectively “unfixable under constraint”). Treat setup/hold separately if timing closure reveals both. Ignore truly non-fixable timing reasons. If timing closure increases power, the final power stage should target that increased component (or total power). Area is not primary here; if timing closure bloats area, plan an area recovery later.
+
+---
+
+# Leakage-focused Recovery Passes Interleaved with Timing Guardbands 
+
+**Design Summary:** The design needs timing closure but also shows elevated leakage; after timing closes, leakage is reduced under guardbands, then dynamic/total power is addressed, with a final timing repair for any regressions.
+**Target selection:** Close timing first, then run **leakage** recovery under a timing guardband, then dynamic/total power recovery, then a final timing cleanup. Shift focus if one power component shows no further improvement.
+**Option selection:** Timing: explore broadly then exploit targeted options informed by unfixable reasons. Leakage stage: explore multiple leakage-oriented option sets **within guardband**, then exploit the safest high-yield subset. Dynamic/total stage: explore different option sets, then exploit the best tradeoff found.
+**Guidelines:** Maintain slack/guardbands so power steps don’t reintroduce major timing violations. Treat setup/hold separately during timing cleanup if needed. Ignore non-fixable reasons. If timing work increased power, prioritize recovering that increased power component; if power steps cause timing regressions, fix them in the final timing pass. Area is secondary; revisit if needed after timing/power stabilize.
+
+---
+
+# Area Trim with Timing “Backstops” → Power → Timing 
+
+**Design Summary:** The design has area bloat with some timing slack; area trimming is possible only up to a backstop, then power is reduced and timing is repaired for any regressions.
+**Target selection:** Trim area first only where slack permits (timing backstop), then reduce power, then finalize timing. Stop area trim once the backstop is reached and preserve iterations for closure.
+**Option selection:** Area stage: explore different area-focused option combinations under the backstop, then exploit the ones that reduce area without harming timing. Power stage: explore then exploit (component-aware) using remaining slack. Timing stage: focused exploitation to repair regressions introduced by area/power.
+**Guidelines:** Never consume timing margin past the backstop; treat setup/hold separately during final timing repair if needed. Ignore truly non-fixable violations. If timing closure increases area/power again, note it and consider a short recovery pass later. Avoid repeating any area/power/timing option sets that were previously ineffective.
+
+---
+
+# Slack-Distribution Driven Power Recovery (Timing kept stable while “spending slack”) 
+
+**Design Summary:** The design is timing-closed with limited spare slack but high power; slack must be carefully budgeted across power moves, with optional area cleanup only where slack remains safe.
+**Target selection:** Close timing first, then run power recovery while explicitly budgeting slack (don’t overspend), then perform a light area cleanup if timing-created bloat exists.
+**Option selection:** Power step explores multiple slack-allocation/guardband configurations to learn where slack converts best into power savings; then exploits the best distribution. Timing/area steps use history-driven exploitation to avoid repeated no-effect choices.
+**Guidelines:** Keep timing stable: separate setup/hold control as needed, ignore non-fixable reasons, and reserve slack for safety. If timing improvements increased power, allocate slack to recover that increased component (or total power). If power recovery introduces timing regressions, immediately follow with targeted timing repair (or ensure the flow includes a timing check). Area cleanup should only use safe slack regions; if area cannot be reduced without timing loss, treat as unfixable for this round.
+
+---
+
+# Hold-first Stabilization → Setup Timing → Power → Hold Re-check 
+
+**Design Summary:** The design is dominated by hold violations early on; after stabilizing hold, setup closure still requires heavy effort, power likely worsens, and a final hold re-check is needed.
+**Target selection:** If hold violations dominate early, stabilize hold first (moderate effort), then close setup timing (high effort), then recover power, then re-check hold at the end.
+**Option selection:** Each stage uses explore→exploit: explore option combinations to reveal easy fixes and unfixable reasons; exploit targeted options based on observed causes and prior outcomes, avoiding repeats with no improvement.
+**Guidelines:** Treat **hold vs setup** separately and track progress independently. Ignore truly non-fixable issues. After setup timing, leave iterations for power recovery (timing fixes can increase power/area). If power optimization affects timing, rely on final hold re-check plus targeted timing-aware selection to prevent regressions. If hold stabilization increased power/area notably, prioritize power recovery on the increased component; consider a later area-focused pass if needed.
+
+---
+
+# Multi-Candidate Round (branch within a round, then converge) 
+
+**Design Summary:** The design shows mixed symptoms and the best next target is unclear; short branches probe timing/power/area directions, then the best-performing path is selected and finalized with timing cleanup.
+**Target selection:** With sufficient budget, branch after an initial timing step into multiple short candidates (e.g., timing→power vs timing→area), then pick the best and converge with a final timing cleanup. This explores targets quickly without committing the whole round.
+**Option selection:** Initial timing uses broad exploration then targeted exploitation. Each branch uses exploration across options suited to its target; convergence exploits the winning branch and avoids repeating losing branch patterns.
+**Guidelines:** Maintain separate setup/hold awareness in timing steps; ignore non-fixable reasons. Branch steps should respect slack (don’t create large new violations). If the chosen branch causes power/area regressions (or timing regressions), run the final timing cleanup and log which option sets were ineffective so they aren’t reused. Ensure remaining iterations are reserved for convergence and final checks.
+
+---
+
+# Population-of-Sequences Search (many diverse sequences, breed new from best) 
+
+**Design Summary:** The design’s response is uncertain and non-uniform; diverse sequences are needed to discover which target orders improve it, while poor sequences are pruned and successful patterns are mutated.
+**Target selection:** Across rounds, maintain diverse target orders (timing/power/area permutations). Prefer less-explored targets/options when budget allows; drop sequences that plateau and shift effort to others. Ensure some budget remains to recover power/area after timing-heavy sequences.
+**Option selection:** Within each sequence, apply explore→exploit and avoid repeats with no effect. Between rounds, keep the best “no-regret” sequences and generate new ones by small variations while maintaining diversity.
+**Guidelines:** For each sequence, follow timing/power/area fixing rules: separate setup/hold control, ignore truly unfixable issues, and re-run power/area if timing increased them (or re-run timing if power/area introduced regressions). The population mechanism should filter out sequences that repeatedly break constraints or fail to improve.
+
+---
+
+# Model-Guided Sequence Proposal (learn from prior rounds) 
+
+**Design Summary:** The design has a history of attempts with identifiable patterns; a model can steer the next target order while still exploring, keeping recovery steps to prevent regressions.
+**Target selection:** Use history to adaptively choose which target (timing/power/area) and order to run next: exploit sequences predicted to help, but occasionally explore uncertain/untried sequences to avoid stagnation. Shift away from well-explored targets with no progress.
+**Option selection:** Inside each chosen stage, do explore→exploit; at the round level, the model guides which option families to try next based on prior “unfixable reasons” and observed deltas, while avoiding repeated no-effect choices.
+**Guidelines:** Always enforce timing fundamentals (separate setup/hold when needed), ignore truly non-fixable issues, and preserve iterations for recovery steps: power/area after timing (since timing can worsen them) and timing re-check after power/area. Use learned causes to target options and to stop chasing non-improving directions.
+
+---
+
+# “Satisficing” Constraints Then Tradeoff Refinement (tighten goals gradually) 
+
+**Design Summary:** The design is far from timing closure and must first reach acceptable timing; only then can power and area be optimized, with gradual tightening of tradeoffs afterward.
+**Target selection:** Stage goals across rounds: first reach acceptable timing (satisficing), then optimize power under that timing constraint, then optimize area, then optionally refine tradeoffs. Within a round, usually timing→power→area, but effort shifts by stage.
+**Option selection:** In each stage, explore broadly to find workable option sets, then exploit the best. Apply strict filtering: reject options that violate already-satisfied constraints. With limited budget, prioritize exploitation of proven sequences; with more budget, explore new options to reveal unfixable reasons.
+**Guidelines:** Separate setup/hold handling. Ignore truly non-fixable issues once identified. After timing steps that raise power/area, recover them in later stages; after power/area steps that regress timing, re-run targeted timing repair. Allocate iterations so each stage has enough budget and avoid repeating ineffective option sets.
+
+---
+
+ 
+
+# Timing (Aggressive) → Power (Exploration) → Area (Exploitation) 
+
+**Design Summary:** The design is timing-limited, but the aggressive pass is time-boxed to preserve budget for power and area; power is explored to find safe savings, then area is trimmed using known-safe options.
+**Target selection:** Allocate a balanced stage budget across timing/power/area, with a short aggressive timing push, a bounded power exploration, and a focused area trim using remaining slack.
+**Option selection:** Timing runs explore-then-exploit to surface limits quickly; power explores several component options then confirms the best; area exploits proven trims with a small validation probe.
+**Guidelines:** Separate setup/hold, enforce guardbands in power/area steps, and keep a small reserve for timing repair if later stages regress timing.
+---
+
+# Timing (Incremental) → Area (Exploration) → Power (Exploitation) 
+
+**Design Summary:** Timing is near closure, so incremental timing creates modest slack; area risk is unclear and needs exploration, while power has known fixes that can be exploited once slack is secured.
+**Target selection:** Split effort across the three stages, using a short incremental timing pass, a bounded area exploration, and a power exploitation pass.
+**Option selection:** Timing is mostly exploitation with a quick exploratory check; area explores a few combinations then locks on the best; power exploits known-safe component reductions with minimal probing.
+**Guidelines:** Stop area trimming at the backstop, keep timing guardbands intact, and schedule a brief timing re-check if power savings regress slack.
+---
+
+# Power (Exploration) → Timing (Aggressive) → Area (Incremental) 
+
+**Design Summary:** Slack is healthy but power is high; power exploration is time-boxed under floors, aggressive timing restores any damage, and incremental area trimming uses whatever slack remains.
+**Target selection:** Balance stage time across power, timing, and area: explore power first under constraints, aggressively close timing, then incrementally trim area.
+**Option selection:** Power explores multiple component options then confirms the best; timing runs explore-then-exploit; area uses low-risk incremental trims based on prior wins.
+**Guidelines:** Enforce timing floors during power actions, separate setup/hold in timing, and only spend slack on area after timing stabilizes.
+---
+
+# Power (Exploitation) → Area (Exploration) → Timing (Incremental) 
+
+**Design Summary:** Power has known effective fixes while area is uncertain; apply trusted power reductions, explore area trims, and finish with incremental timing stabilization.
+**Target selection:** Keep budgets balanced: a short power exploitation pass, a bounded area exploration, and a final incremental timing cleanup.
+**Option selection:** Power exploits proven options with a quick sanity check; area explores several combinations then picks the safest; timing uses targeted incremental fixes.
+**Guidelines:** Maintain timing floors and area backstops, and rely on the final timing pass to repair any regressions introduced earlier.
+---
+
+# Area (Exploration) → Timing (Aggressive) → Power (Incremental) 
+
+**Design Summary:** Area bloat is severe but slack exists; exploratory area trims probe the safe boundary, aggressive timing repairs regressions, and incremental power recovery uses the restored slack.
+**Target selection:** Balance effort by time-boxing area exploration, then aggressively closing timing, then incrementally recovering power.
+**Option selection:** Area explores multiple trims and then exploits the best; timing runs explore-then-exploit; power uses targeted incremental options on the increased component.
+**Guidelines:** Respect the timing backstop during area work, keep setup/hold separate during timing, and only run power recovery after slack returns.
+---
+
+# Area (Exploitation) → Power (Exploration) → Timing (Incremental) 
+
+**Design Summary:** Area fixes are known and safe; apply them quickly, explore power savings under guardbands, and finish with incremental timing repair.
+**Target selection:** Allocate balanced stage budgets: short area exploitation, bounded power exploration, then incremental timing cleanup.
+**Option selection:** Area exploits proven trims; power explores component/guardband options then confirms the best; timing uses targeted incremental fixes.
+**Guidelines:** Maintain timing floors, keep area within the backstop, and preserve a small timing reserve for any late regressions.
+---
+
+# Timing (Exploration) → Power (Exploitation) → Area (Incremental) 
+
+**Design Summary:** Timing root causes are unclear, so exploration is needed; once slack appears, known power fixes are applied, and area is trimmed incrementally with minimal risk.
+**Target selection:** Balance time across the three stages: explore timing to identify fixable causes, exploit power reductions, then incrementally trim area.
+**Option selection:** Timing explores a broad set then quickly exploits the best; power exploits known-safe component fixes with a small validation step; area uses incremental trims based on history.
+**Guidelines:** Separate setup/hold, budget slack explicitly, and stop area trimming if it threatens timing stability.
+---
+
+# Power (Exploration) → Area (Exploitation) → Timing (Aggressive) 
+
+**Design Summary:** Power is high with uncertain causes; explore power under floors, apply known area trims, and finish with an aggressive timing closure while preserving balance across stages.
+**Target selection:** Keep budgets balanced: a bounded power exploration, a focused area exploitation, then an aggressive timing close-out.
+**Option selection:** Power explores component options then confirms the best; area exploits proven trims with a small probe; timing runs explore-then-exploit to drive closure.
+**Guidelines:** Enforce timing floors during early stages, keep area within slack, and treat setup/hold separately in the final timing pass.
+---
+
+# Timing (Aggressive) → Power Recovery → Timing (Incremental) → Area Trim → Final Timing Touch-up 
+
+**Design Summary:** Severe timing issues require an aggressive start, but the timing passes are time-boxed to preserve budget for power and area; power recovery and area trim are balanced between the two timing stabilizations.
+**Target selection:** Split the round across two shorter timing passes, one power recovery, and one area trim, ending with a brief timing touch-up.
+**Option selection:** Aggressive timing explores broadly then exploits; power uses explore→exploit on the increased component; incremental timing exploits proven fixes; area trim exploits safe options with a small probe.
+**Guidelines:** Separate setup/hold, enforce guardbands in power/area steps, and reserve the final timing touch-up strictly for regressions.
+---
+
+# Setup Timing → Power (Exploration) → Hold Timing → Area (Exploitation) → Setup Re-check 
+
+**Design Summary:** Setup dominates but power hotspots are uncertain; the flow balances setup and hold work with a bounded power exploration and a safe area trim, then re-checks setup for regressions.
+**Target selection:** Distribute effort across five stages, avoiding over-investment in any single metric; treat setup and hold as separate timing goals.
+**Option selection:** Setup uses explore→exploit; power explores under floors then confirms the best; hold is targeted exploitation with a small exploratory check; area is exploitation-only; re-check uses focused incremental fixes.
+**Guidelines:** Keep power/area within guardbands, preserve timing slack for the re-check, and log ineffective options for the next round.
+---
+
+# Power-first Under Floors → Timing (Incremental) → Area (Exploration) → Power Recovery → Timing Cleanup 
+
+**Design Summary:** Slack is healthy but power is high; two short power passes bracket timing and area to balance effort, with a final timing cleanup to protect closure.
+**Target selection:** Allocate balanced time across the five stages: constrained power, incremental timing, exploratory area, power recovery, and timing cleanup.
+**Option selection:** First power pass explores then confirms safe options; timing exploits incremental fixes; area explores a few trims; second power pass exploits the best component fixes; final timing uses targeted cleanup.
+**Guidelines:** Enforce timing floors during power steps, stop area trimming at the backstop, and reserve the last timing pass strictly for regressions.
+---
+
+# Area Trim (Backstop) → Timing (Aggressive) → Power (Exploitation) → Timing (Incremental) → Area Cleanup 
+
+**Design Summary:** Area bloat is addressed in two short touches, with timing and power in between to maintain balance; aggressive timing repairs early regressions, and incremental timing stabilizes before a small final area cleanup.
+**Target selection:** Balance budgets across the five stages: a backstopped area trim, aggressive timing, power exploitation, incremental timing, and a light area cleanup.
+**Option selection:** First area pass explores then exploits within the backstop; timing runs explore-then-exploit then incremental fixes; power exploits proven reductions; final area cleanup uses only known-safe trims.
+**Guidelines:** Keep strict timing guardbands during area work, separate setup/hold in timing passes, and only run the final area cleanup if timing remains stable.
+---
+
+# Timing (Exploration) → Power (Exploitation) → Area (Exploration) → Power (Incremental) → Timing Cleanup 
+
+**Design Summary:** Timing causes are unclear, so exploration leads; power fixes are known and applied, area is explored cautiously, then a second power pass and timing cleanup restore balance.
+**Target selection:** Balance effort across all five stages, keeping both power passes short and reserving the final timing cleanup for regressions.
+**Option selection:** Timing explores broadly then exploits briefly; first power pass exploits proven options; area explores a few trims then picks the safest; second power pass is incremental; final timing is targeted cleanup.
+**Guidelines:** Enforce guardbands, avoid repeating ineffective options between the two power passes, and keep setup/hold control separate.
+---
+
+# Power (Exploration) → Timing (Aggressive) → Area (Exploration) → Power (Exploitation) → Timing (Incremental) 
+
+**Design Summary:** Power is high with uncertain causes; an exploratory power pass is bounded, aggressive timing repairs any damage, area is explored for safe trims, and a second power pass plus incremental timing stabilize the tradeoff.
+**Target selection:** Balance stage budgets across power, timing, and area, with two short power touches and two timing passes to avoid over-spending any single metric.
+**Option selection:** Power explores then later exploits; aggressive timing runs explore-then-exploit; area explores a few combinations; final timing is incremental exploitation.
+**Guidelines:** Enforce timing floors in early power actions, keep area trimming within slack, and reserve the last timing pass strictly for regression cleanup.
+---

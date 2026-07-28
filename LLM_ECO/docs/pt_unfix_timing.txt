@@ -1,0 +1,176 @@
+# Unfixable Reasons Reference Guide
+
+## Timing Violation Unfixable Reasons
+
+### Reason A - Available Library Cells Outside Area Limit
+**Issue**: Library cells that could fix the violation exceed the specified area limit
+**Root Cause**: The area_cap variable restricts the use of larger cells that would otherwise fix the violation
+**Solution Strategy**: Increase the area limit using the `-area_cap` option to allow access to these library cells
+**When to Apply**: When promising fixing options exist but are restricted by area constraints
+**Keywords**: area limit, library cells, area constraints, cell sizing restrictions, area_cap option
+
+### Reason B - Delay Improvement Too Small
+**Issue**: The delay improvement achievable is insufficient to completely fix the violation
+**Root Cause**: The violating slack is too negative for the available optimization actions in this stage
+**Solution Strategy**:
+- Set a negative margin for target slack using `-setup_guard` or `-hold_margin` options
+- This allows partial improvement even if complete fixing is not possible
+**Alternative Approach**: Consider different fixing actions or accept partial improvement
+
+### Reason C - Clock Network Violation
+**Issue**: The timing violation exists within the clock network
+**Root Cause**: Default settings prevent clock network modifications to avoid creating new violations
+**Why It Occurs**: Modifying clock networks can alter clock tree timing and potentially create cascading violations
+**Solution Strategy**:
+- First attempt data path fixing with `-cell_class combinational`
+- Then try sequential cell fixing with `-cell_class sequential`
+- If unsuccessful, enable clock network fixing with `-cell_class clock_tree`
+**Risk Consideration**: Clock network changes may introduce new timing violations
+
+### Reason D - High Density Area Constraint
+**Issue**: Insufficient physical space available in the violation vicinity
+**Root Cause**: Cell or net is located in a high-density area with no room for modifications
+**Solution Strategy**: Use `-site_mode occupied_slot` to utilize surrounding area
+**When This Helps**: When the tool needs to access occupied sites for optimization
+
+### Reason I - Buffer Insertion Limitations
+**Issue**: Available buffer cells cannot fix the violation
+**Root Cause**: The `-buffer_list` option restricts the buffer cells available for insertion
+**Solution Strategy**: Specify a wider range of buffer cells in the buffer list
+**Alternative Methods**: Consider using gate_sizing or gate_sizing_side_load instead
+
+### Reason L - Physical Area Limits Library Cell Usage
+**Issue**: Required library cells exceed available physical layout area
+**Root Cause**: Physical constraints prevent using cells that could fix the violation
+**Impact**: One or more library cells cannot be placed due to area restrictions
+**Solution Strategy**:
+- If violations persist, avoid fixing these specific timing paths
+- Consider using smaller cells or different fixing actions
+**Decision Point**: Evaluate whether to continue attempting fixes on these paths
+
+### Reason M - Clock Network Threshold Not Met
+**Issue**: Insufficient violations in leaf cells to justify clock network modification
+**Root Cause**: Number of fixable violations in transitive fanout is below threshold
+**Threshold Parameter**: `-clock_fixes_per_change violation_limit` (default: 1)
+**Solution Strategy**: Lower the violation limit threshold to allow fixes
+**Note**: Default value is 1, typically no adjustment needed
+
+### Reason N - Clock Tree Level Exceeds Threshold
+**Issue**: Clock tree level is higher than allowed threshold
+**Root Cause**: The `-clock_max_level_from_reg` option restricts modifications at this level
+**Default Setting**: 0 (no limit)
+**Solution Strategy**:
+- Increase the level limit
+- Or disable the limit entirely (set to 0)
+**Consideration**: Higher clock tree levels may have broader impact
+
+### Reason O - No Open Free Sites Available
+**Issue**: No empty free sites exist on the route or nearby
+**Root Cause**: Complete physical congestion in the area
+**Initial Attempt**: Try increasing area_cap
+**If Persistent**: Ignore fixing relevant paths as physical constraints are insurmountable
+**Alternative**: Consider different physical modes or routing strategies
+
+### Reason Q - Capture-Launch Timing Conflict
+**Issue**: Both capture and launch sides of a flip-flop have timing violations
+**Root Cause**: Conflicting timing requirements that cannot be simultaneously satisfied
+**Impact**: Fixing one side may worsen the other
+**Recommended Action**: If this error persists, ignore these violations
+**Nature**: Fundamental timing conflict requiring design-level changes
+
+### Reason R - Parasitic Location Issues
+**Issue**: Missing location coordinates or location transformation failure
+**Root Cause**: Parasitics files lack required location coordinates for buffer insertion
+**Primary Solution**: Use `gate_sizing` or `gate_sizing_side_load` actions instead
+**If Persistent**: Ignore fixing relevant timing paths
+**Note**: Buffer insertion requires valid location data
+
+### Reason S - Cell Sizing Exhausted
+**Issue**: All alternative library cells considered, but violation remains
+**Root Cause**: Cell sizing alone cannot provide sufficient improvement
+**What Was Tried**: All available alternative library cells for sizing
+**Next Step**: Use buffer insertion actions to fix the violation
+**Decision**: Evaluate if buffer insertion is appropriate for this path
+
+### Reason T - Timing Margin Too Tight
+**Issue**: Critical timing path with insufficient opposite constraint slack
+**Root Cause**: Setup or hold timing path is critical/near-critical with no margin for adjustment
+**Constraint Conflict**: Opposite timing constraint lacks slack for targeted timing fix
+**Solution Strategy**:
+- Relax timing fixing constraints with negative values
+- Use `-setup_guard` with negative value for setup timing relaxation
+- Use `-hold_margin` with negative value for hold timing relaxation
+**Trade-off**: May slightly violate one constraint to fix another
+
+### Reason W - DRC Violation Risk
+**Issue**: Timing fix would create or worsen DRC violations
+**Root Cause**: Physical design rule constraints conflict with timing optimization
+**Default Behavior**: Preserves DRC compliance over timing fixes
+**Override Option**: Use `-ignore_drc` to prioritize timing over DRC
+**Warning**: May result in DRC violations requiring later resolution
+
+## Power and Area Optimization Unfixable Reasons
+
+### Reason B - Insufficient Sizing Benefit
+**Issue**: The benefit from sizing the cell is too small to justify the change
+**Impact on Power**: Minimal power reduction achievable through sizing
+**Impact on Area**: Negligible area improvement from available options
+**Decision**: Cell sizing not worth the effort for this instance
+**Alternative**: Consider other optimization actions or targets
+
+### Reason L - Physical Constraints Restrict Sizing
+**Issue**: Physical layout constraints prevent cell sizing
+**Root Cause**: Location or routing constraints limit cell replacement options
+**Similar to Timing**: Physical area limits the use of alternative cells
+**Workaround**: May need to accept current cell or use different optimization approach
+
+### Reason S - No Better Power Alternative
+**Issue**: No alternate library cell exists with better power characteristics
+**Current State**: Cell already uses optimal power variant available
+**Library Limitation**: All alternatives have equal or worse power consumption
+**Action**: Accept current power level for this cell
+
+### Reason T - Timing Degradation Risk
+**Issue**: Sizing the cell would degrade timing performance
+**Trade-off**: Power/area improvement would violate timing constraints
+**Priority**: Timing violations take precedence over power/area optimization
+**Decision Point**: Maintain current cell to preserve timing
+
+### Reason W - DRC Degradation Risk
+**Issue**: Sizing the cell would degrade or create DRC violations
+**Trade-off**: Power/area improvement conflicts with design rules
+**Priority**: DRC compliance typically takes precedence
+**Override**: Consider `-ignore_drc` if power/area is critical
+
+### Reason X - Cell Unusable for ECO
+**Issue**: The cell is marked as unusable for Engineering Change Orders
+**Restriction**: Design or tool constraints prevent ECO modifications
+**Possible Causes**: Cell may be critical, locked, or specially designated
+**Action**: Skip this cell in optimization attempts
+
+### Reason Z - Cell Already Sized
+**Issue**: The cell has already been sized in a previous optimization step
+**State**: Cell is already at its optimal size for current constraints
+**Implication**: Further sizing attempts would be redundant
+**Action**: Focus optimization efforts on other cells
+
+## Usage Guidelines for Unfixable Reasons
+
+### Interpreting Unfixable Reports
+- Multiple reasons may apply to a single violation
+- Reasons help identify which fixing options to avoid
+- Use reason codes to guide strategy adjustments
+- Consider reason distribution when selecting next optimization approach
+
+### Strategic Response to Unfixable Reasons
+- **Physical constraints (L, D, O)**: Consider changing physical modes or accepting limitations
+- **Threshold issues (M, N)**: Adjust threshold parameters if appropriate
+- **Method limitations (I, S)**: Switch to alternative fixing actions
+- **Fundamental conflicts (Q, T)**: May require design-level changes or trade-offs
+- **Already optimized (Z)**: Move to different targets or cells
+
+### Decision Framework Based on Unfixable Reasons
+1. **High occurrence of L, D, O**: Physical constraints dominant - consider different areas or accept limits
+2. **High occurrence of B, S**: Current actions exhausted - try alternative approaches
+3. **High occurrence of T, Q**: Fundamental timing conflicts - evaluate design trade-offs
+4. **High occurrence of W**: DRC compliance issues - decide on priority between timing and DRC

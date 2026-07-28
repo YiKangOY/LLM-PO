@@ -1,0 +1,62 @@
+# Author: baichen318@gmail.com
+
+
+# working mode: online/offline
+# NOTICE: only online mode is kept; offline dataset mode is pruned.
+mode: online
+
+
+rl-bo:
+  # design-specific ECO settings
+  design-configs: configs/design_configs.py
+  design-name: hidden1
+  # length of one BO episode / action sequence
+  episode-length:
+  # number of random action sequences to seed the BO candidate pool
+  candidate-pool: 64
+  # initial samples evaluated before BO loop starts
+  initial-samples: 0
+  # parallel environments for sampling/evaluation
+  num-envs: 1
+  # run RL environment in simulation (False to execute real tool flow)
+  use-simulation: False
+  # optional: plug in a custom ECO environment class inside BO (path.to.module:ClassName)
+  env-entrypoint: bo_env_adapter:BOECOEnvAdapter
+  # keyword arguments forwarded to the custom ECO environment class
+  env-kwargs:
+    bo_root: ../RL
+    reports_loader_entrypoint: bo_report_loader:load_reports_for_iteration
+  # fallback reference point for hypervolume in objective order:
+  # [area, hold_tns, power, setup_tns].
+  # Runtime now attempts to load iteration-0 reports first.
+  ref-point:
+    - 0.0
+    - 0.0
+    - 0.0
+    - 0.0
+  # acquisition preference weights in objective order by name.
+  # EHVI is computed in normalized objective space after applying these weights.
+  objective-weights:
+    area: 1.0
+    hold_tns: 1.0
+    power: 1.0
+    setup_tns: 3.0
+
+
+# bayesian optimization settings
+bo:
+  # the maximal optimization steps
+  max-bo-steps: 2
+
+
+# DKL-GP settings
+dkl-gp:
+  # the MLP output dimension specification
+  mlp-output-dim: 6
+  # the learning rate for DKL-GP
+  learning-rate: 0.001
+  # the maximal training epochs
+  max-traininig-epoch: 50
+
+report:
+  path: rpts
