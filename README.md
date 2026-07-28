@@ -1,8 +1,20 @@
-# LLM-ECO
+# LLM-PO
 
-LLM-based ECO optimization with Agent and RL (A3C/PPO) baselines.
+LLM-PO provides LLM agents for physical optimization, with RL (A3C/PPO)
+baselines for comparison.
+
+This repository is the official implementation of the paper
+**“Retrieve, Schedule, Reflect: LLM Agents for Chip QoR Optimization”**, accepted
+by the ACM/IEEE International Symposium on Machine Learning for CAD (MLCAD 2026).
+
+The authors are Yikang Ouyang, Dongsheng Zuo, Yang Luo, and Yuzhe Ma.
+
+For questions or collaboration opportunities, please contact Yikang Ouyang at
+`youyang929 [at] connect [dot] hkust-gz [dot] edu [dot] cn`.
 
 ## Citation
+
+If you find our work helpful, please consider citing our paper:
 
 ```bibtex
 @inproceedings{ouyang2026retrieve,
