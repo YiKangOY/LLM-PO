@@ -7,7 +7,7 @@ This repository is the official implementation of the paper
 **“Retrieve, Schedule, Reflect: LLM Agents for Chip QoR Optimization”**, accepted
 by the ACM/IEEE International Symposium on Machine Learning for CAD (MLCAD 2026).
 
-The authors are Yikang Ouyang, Dongsheng Zuo, Yang Luo, and Yuzhe Ma.
+The authors are Yikang Ouyang, Yang Luo, Dongsheng Zuo, and Yuzhe Ma.
 
 For questions or collaboration opportunities, please contact Yikang Ouyang at
 `youyang929 [at] connect [dot] hkust-gz [dot] edu [dot] cn`.
@@ -19,7 +19,7 @@ If you find our work helpful, please consider citing our paper:
 ```bibtex
 @inproceedings{ouyang2026retrieve,
   title     = {Retrieve, Schedule, Reflect: LLM Agents for Chip QoR Optimization},
-  author    = {Yikang Ouyang and Dongsheng Zuo and Yang Luo and Yuzhe Ma},
+  author    = {Yikang Ouyang and Yang Luo and Dongsheng Zuo and Yuzhe Ma},
   booktitle = {ACM/IEEE International Symposium on Machine Learning for CAD},
   year      = {2026}
 }
